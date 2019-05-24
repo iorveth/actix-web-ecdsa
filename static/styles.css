@@ -1,0 +1,9 @@
+#txtbox {
+     font-size:18pt;
+     height:420px;
+     width:300px;
+}
+#form {
+	min-width: 30%;
+    display: inline-block;
+}
