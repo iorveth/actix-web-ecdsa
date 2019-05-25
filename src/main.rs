@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate serde_derive;
 use actix_files as fs;
-use actix_web::{middleware, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{middleware, Files, web, App, HttpResponse, HttpServer, Responder};
 use ring::{
     rand,
     signature::{self, KeyPair},
@@ -80,9 +80,9 @@ fn verify_signed_message(
     signed_message_bytes: &[u8],
     public_ecdsa_key_bytes: &[u8],
 ) -> Result<(), ring::error::Unspecified> {
-    let message = untrusted::Input::from(&message_bytes);
-    let sig = untrusted::Input::from(&signed_message_bytes);
-    let public_ecdsa_key = untrusted::Input::from(&public_ecdsa_key_bytes);
+    let message = untrusted::Input::from(message_bytes);
+    let sig = untrusted::Input::from(signed_message_bytes);
+    let public_ecdsa_key = untrusted::Input::from(public_ecdsa_key_bytes);
     signature::verify(
         &signature::ECDSA_P256_SHA256_ASN1,
         public_ecdsa_key,
