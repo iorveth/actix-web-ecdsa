@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate serde_derive;
 use actix_files as fs;
-use actix_web::{middleware, Files, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{middleware, web, App, HttpResponse, HttpServer, Responder};
 use ring::{
     rand,
     signature::{self, KeyPair},
