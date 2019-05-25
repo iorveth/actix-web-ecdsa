@@ -8,8 +8,8 @@ use ring::{
 };
 use signature::EcdsaKeyPair;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::env;
+use std::sync::{Arc, Mutex};
 
 #[derive(Deserialize)]
 pub struct SignParams {
@@ -29,7 +29,6 @@ struct ECDSAState {
     //Signature - Message
     signatures: Mutex<HashMap<String, String>>,
 }
-
 
 fn main() -> std::io::Result<()> {
     let port = env::var("PORT")
@@ -74,6 +73,22 @@ fn sign_message(message: &[u8], key_pair: &EcdsaKeyPair) -> Result<String, Box<s
     let sig = key_pair.sign(&rng, msg)?;
     let sig_bytes = sig.as_ref();
     Ok(hex::encode(sig_bytes))
+}
+
+fn verify_signed_message(
+    message_bytes: &[u8],
+    signed_message_bytes: &[u8],
+    public_ecdsa_key_bytes: &[u8],
+) -> Result<(), ring::error::Unspecified> {
+    let message = untrusted::Input::from(&message_bytes);
+    let sig = untrusted::Input::from(&signed_message_bytes);
+    let public_ecdsa_key = untrusted::Input::from(&public_ecdsa_key_bytes);
+    signature::verify(
+        &signature::ECDSA_P256_SHA256_ASN1,
+        public_ecdsa_key,
+        message,
+        sig,
+    )
 }
 
 fn sign() -> HttpResponse {
@@ -168,14 +183,10 @@ fn handle_verify_message(
                     .body(format!("Invalid signed message format"))
             }
         };
-        let message = untrusted::Input::from(&message_bytes);
-        let sig = untrusted::Input::from(&signed_message_bytes);
-        let public_ecdsa_key = untrusted::Input::from(&public_ecdsa_key_bytes);
-        if let Ok(_) = signature::verify(
-            &signature::ECDSA_P256_SHA256_ASN1,
-            public_ecdsa_key,
-            message,
-            sig,
+        if let Ok(_) = verify_signed_message(
+            &message_bytes,
+            &signed_message_bytes,
+            &public_ecdsa_key_bytes,
         ) {
             HttpResponse::Ok()
                 .content_type("text/plain")
