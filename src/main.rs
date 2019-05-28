@@ -117,7 +117,7 @@ fn handle_generate_keys(ecdsa_state: web::Data<Arc<ECDSAState>>) -> HttpResponse
         .replace("PublicKey", "")
         .replace("(\"", "")
         .replace("\")", "");
-    let mut keys_state = ecdsa_state.keys.lock().unwrap();
+    let keys_state = &mut ecdsa_state.keys.lock().unwrap();
     keys_state.insert(public_key_str.clone(), key_pair);
     HttpResponse::Ok()
         .content_type("text/plain")
@@ -129,8 +129,8 @@ fn handle_sign_message(
     params: web::Form<SignParams>,
 ) -> HttpResponse {
     let public_ecdsa_key = params.public_key.trim().to_string();
-    let keys_state = ecdsa_state.keys.lock().unwrap();
-    let mut signatures_state = ecdsa_state.signatures.lock().unwrap();
+    let keys_state = &ecdsa_state.keys.lock().unwrap();
+    let signatures_state = &mut ecdsa_state.signatures.lock().unwrap();
     let key_pair = if let Some(key_pair) = keys_state.get(&public_ecdsa_key) {
         key_pair
     } else {
@@ -158,8 +158,8 @@ fn handle_verify_message(
 ) -> impl Responder {
     let public_ecdsa_key = params.public_key.trim().to_string();
     let signed_message = params.signed_message.trim().to_string();
-    let keys_state = ecdsa_state.keys.lock().unwrap();
-    let signatures_state = ecdsa_state.signatures.lock().unwrap();
+    let keys_state = &ecdsa_state.keys.lock().unwrap();
+    let signatures_state = &ecdsa_state.signatures.lock().unwrap();
     let message = if let Some(message) = signatures_state.get(&signed_message) {
         message
     } else {
