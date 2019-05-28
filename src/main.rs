@@ -131,18 +131,16 @@ fn handle_sign_message(
     let public_ecdsa_key = params.public_key.trim().to_string();
     let keys_state = ecdsa_state.keys.lock().unwrap();
     let mut signatures_state = ecdsa_state.signatures.lock().unwrap();
-    if keys_state.contains_key(&public_ecdsa_key) {
-        let key_pair = keys_state.get(&public_ecdsa_key).unwrap();
-        let message = params.message.trim();
-        let message_bytes = message.as_bytes();
-        let sig_str = match sign_message(&message_bytes, key_pair) {
-            Ok(sig_str) => sig_str,
-            Err(_) => {
-                return HttpResponse::Ok()
-                    .content_type("text/plain")
-                    .body(format!("Signature generation error occured!"))
-            }
-        };
+    let key_pair = if let Some(key_pair) = keys_state.get(&public_ecdsa_key) {
+        key_pair
+    } else {
+        return HttpResponse::Ok()
+            .content_type("text/plain")
+            .body(format!("Key-Value pair not found"));
+    };
+    let message = params.message.trim();
+    let message_bytes = message.as_bytes();
+    if let Ok(sig_str) = sign_message(&message_bytes, key_pair) {
         signatures_state.insert(sig_str.clone(), message.to_string());
         HttpResponse::Ok()
             .content_type("text/plain")
@@ -150,7 +148,7 @@ fn handle_sign_message(
     } else {
         HttpResponse::Ok()
             .content_type("text/plain")
-            .body(format!("Key-Value pair not found"))
+            .body(format!("Signature generation error occured!"))
     }
 }
 
@@ -162,11 +160,15 @@ fn handle_verify_message(
     let signed_message = params.signed_message.trim().to_string();
     let keys_state = ecdsa_state.keys.lock().unwrap();
     let signatures_state = ecdsa_state.signatures.lock().unwrap();
-
-    if keys_state.contains_key(&public_ecdsa_key) && signatures_state.contains_key(&signed_message)
-    {
-        let message = signatures_state.get(&signed_message).unwrap();
-        let message_bytes = message.as_bytes();
+    let message = if let Some(message) = signatures_state.get(&signed_message) {
+        message
+    } else {
+        return HttpResponse::Ok()
+            .content_type("text/plain")
+            .body(format!("Signature-Message pair not found"));
+    };
+    let message_bytes = message.as_bytes();
+    if keys_state.contains_key(&public_ecdsa_key) {
         let public_ecdsa_key_bytes = match hex::decode(&public_ecdsa_key) {
             Ok(public_ecdsa_key_bytes) => public_ecdsa_key_bytes,
             Err(_) => {
@@ -199,6 +201,6 @@ fn handle_verify_message(
     } else {
         HttpResponse::Ok()
             .content_type("text/plain")
-            .body(format!("Key-Value or Signature-Message pair not found"))
+            .body(format!("Key-Value pair not found"))
     }
 }
